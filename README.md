@@ -1,2 +1,2 @@
-# AirplayMirrorGo
-A cross platform airplay mirroring client by golang
+# AirplayMirroringGo
+A cross platform airplay screen mirroring client by golang
