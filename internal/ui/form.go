@@ -7,20 +7,20 @@ package ui
 
 import (
 	"AirplayMirroringGo/internal/airplay"
+	"AirplayMirroringGo/internal/ffmpeg"
+	_ "AirplayMirroringGo/internal/proxy"
 	"AirplayMirroringGo/internal/screen"
-	"bytes"
 	"fmt"
 	_ "github.com/ying32/govcl/pkgs/winappres"
 	"github.com/ying32/govcl/vcl"
 	"github.com/ying32/govcl/vcl/types"
 	"github.com/ying32/govcl/vcl/types/colors"
-	"image/jpeg"
 	"log"
 	"net"
 	"time"
 )
 
-const FPS = 24
+const FPS = 15
 
 type MainForm struct {
 	*vcl.TForm
@@ -34,6 +34,7 @@ type MainForm struct {
 	startMirroring bool
 	appleTV        net.IP
 	client         *airplay.AppleTVClient
+	ffmpeg         *ffmpeg.Ffmpeg
 }
 
 var (
@@ -44,13 +45,6 @@ func AppFormRun() {
 	vcl.Application.Initialize()
 	vcl.Application.SetMainFormOnTaskBar(true)
 	vcl.Application.CreateForm(&mainForm)
-	//icon := vcl.NewIcon()
-	//icon.LoadFromFile("mirroring.ico")
-	//tray := vcl.NewTrayIcon(mainForm)
-	//tray.SetIcon(icon)
-	//tray.SetVisible(true)
-	//vcl.Application.SetIcon(icon)
-	//icon.Free()
 	vcl.Application.Run()
 }
 
@@ -99,50 +93,30 @@ func (f *MainForm) OnFormCreate(sender vcl.IObject) {
 	f.BtnOK = btn
 
 	f.discovery = airplay.NewDiscovery()
-	go f.searchAppleTV()
+	//go f.searchAppleTV()
 
 	c := airplay.NewAppleTVClient(f.appleTV)
 	f.client = c
+
+	f.ffmpeg = ffmpeg.FFmpeg()
 
 }
 
 func (f *MainForm) OnButtonClick(sender vcl.IObject) {
 	if f.startMirroring {
 		f.startMirroring = false
+		f.ffmpeg.Stop()
 		f.BtnOK.SetCaption("Start Mirroring")
-		f.videoProvider.Stop()
-		f.client.Stop()
 	} else {
-		if f.appleTV == nil {
-			go f.searchAppleTV()
-			return
-		}
+		//if f.appleTV == nil {
+		//	go f.searchAppleTV()
+		//	return
+		//}
 
 		f.startMirroring = true
 		index := f.CombList.ItemIndex()
 		sc := f.screens[index]
-		f.videoProvider.ChooseScreen(sc, FPS)
-		f.videoProvider.Start()
-
-		f.client.Start()
-		go func() {
-			frames := f.videoProvider.GetFrames()
-			opt := &jpeg.Options{Quality: 100}
-			for f.startMirroring {
-				select {
-				case frame := <-frames:
-					buf := &bytes.Buffer{}
-					err := jpeg.Encode(buf, frame, opt)
-					if err != nil {
-						log.Fatalf("JPEG encodeing fail %v", err)
-						return
-					}
-					f.client.Stream <- buf.Bytes()
-					buf.Reset()
-				}
-			}
-		}()
-
+		f.ffmpeg.Start(sc, FPS)
 		f.BtnOK.SetCaption("Stop Mirroring")
 	}
 	f.CombList.SetEnabled(!f.startMirroring)

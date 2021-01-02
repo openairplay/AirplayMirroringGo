@@ -11,8 +11,5 @@ import (
 )
 
 func main() {
-	//dc := airplay.NewDiscovery()
-	//log.Printf("Search AppleTV-airplay: %v", dc.GetAirPlayService())
-	//log.Printf("Search AppleTV-RAOP: %v", dc.GetRemoteAudioOutputProtocolService())
 	ui.AppFormRun()
 }

@@ -16,6 +16,7 @@ import (
 type Screen struct {
 	Index  int
 	Bounds image.Rectangle
+	Min    image.Point
 }
 
 type VideoProvider struct {
@@ -37,12 +38,23 @@ func NewVideoProvider() *VideoProvider {
 func (p *VideoProvider) GetScreens() []Screen {
 	numScreens := screenshot.NumActiveDisplays()
 	screens := make([]Screen, numScreens)
+	var min image.Point
 	for i := 0; i < numScreens; i++ {
 		screens[i] = Screen{
 			Index:  i,
 			Bounds: screenshot.GetDisplayBounds(i),
 		}
+		if screens[i].Bounds.Min.X < min.X {
+			min.X = screens[i].Bounds.Min.X
+		}
+		if screens[i].Bounds.Min.Y < min.Y {
+			min.Y = screens[i].Bounds.Min.Y
+		}
 	}
+	for i := 0; i < numScreens; i++ {
+		screens[i].Min = min
+	}
+
 	return screens
 }
 
