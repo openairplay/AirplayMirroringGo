@@ -10,10 +10,12 @@ import (
 	"AirplayMirroringGo/internal/screen"
 	"bytes"
 	"fmt"
-	_ "github.com/ying32/govcl/pkgs/winappres"
-	"github.com/ying32/govcl/vcl"
-	"github.com/ying32/govcl/vcl/types"
-	"github.com/ying32/govcl/vcl/types/colors"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/widget"
 	"image/jpeg"
 	"log"
 	"net"
@@ -23,11 +25,13 @@ import (
 const FPS = 24
 
 type MainForm struct {
-	*vcl.TForm
-	LabChoose      *vcl.TLabel
-	BtnOK          *vcl.TButton
-	CombList       *vcl.TComboBox
-	Tray           *vcl.TTrayIcon
+	mainApp fyne.App
+	window  fyne.Window
+
+	btnOK     *widget.Button
+	selScreen *widget.Select
+	labChoose *widget.Label
+
 	videoProvider  *screen.VideoProvider
 	screens        []screen.Screen
 	discovery      *airplay.Discovery
@@ -36,67 +40,48 @@ type MainForm struct {
 	client         *airplay.AppleTVClient
 }
 
-var (
-	mainForm *MainForm
-)
-
-func AppFormRun() {
-	vcl.Application.Initialize()
-	vcl.Application.SetMainFormOnTaskBar(true)
-	vcl.Application.CreateForm(&mainForm)
-	//icon := vcl.NewIcon()
-	//icon.LoadFromFile("mirroring.ico")
-	//tray := vcl.NewTrayIcon(mainForm)
-	//tray.SetIcon(icon)
-	//tray.SetVisible(true)
-	//vcl.Application.SetIcon(icon)
-	//icon.Free()
-	vcl.Application.Run()
+func NewMainForm() MainForm {
+	app := app.New()
+	window := app.NewWindow("AppleTV Mirroring")
+	window.SetIcon(resourceMirroringPng)
+	window.Resize(fyne.NewSize(280, 140))
+	window.SetFixedSize(true)
+	window.CenterOnScreen()
+	main := MainForm{mainApp: app, window: window}
+	return main
 }
 
-func (f *MainForm) OnFormCreate(sender vcl.IObject) {
+func (f *MainForm) Run() {
 	log.Print("Main form starting")
 	f.startMirroring = false
-
-	f.SetCaption("AppleTV Mirroring")
-	f.EnabledMaximize(false)
-	f.SetWidth(260)
-	f.SetHeight(180)
-	f.SetPosition(types.PoScreenCenter)
-	f.SetBorderStyle(types.BsDialog)
-	f.Icon().LoadFromFile("mirroring.ico")
-
-	lab := vcl.NewLabel(f)
-	lab.SetParent(f)
-	lab.SetBounds(30, 10, 88, 20)
-	ft := vcl.NewFont()
-	ft.SetColor(colors.ClDarkblue)
-	ft.SetSize(12)
-	lab.SetFont(ft)
-	lab.SetCaption("Choose the screen to mirror")
-	f.LabChoose = lab
 
 	v := screen.NewVideoProvider()
 	f.videoProvider = v
 	f.screens = v.GetScreens()
-	cmb := vcl.NewComboBox(f)
-	cmb.SetParent(f)
-	cmb.SetBounds(20, 48, 220, 28)
-	for i, s := range f.screens {
-		item := fmt.Sprintf("Screen %d : %s", s.Index+1, s.Bounds.String())
-		cmb.AddItem(item, nil)
-		if i == 0 {
-			cmb.SetSelText(item)
-		}
-	}
-	f.CombList = cmb
 
-	btn := vcl.NewButton(f)
-	btn.SetParent(f)
-	btn.SetBounds(80, 100, 110, 28)
-	btn.SetCaption("Start Mirroring")
-	btn.SetOnClick(f.OnButtonClick)
-	f.BtnOK = btn
+	var options []string
+	for _, s := range f.screens {
+		item := fmt.Sprintf("Screen %d : %s", s.Index+1, s.Bounds.String())
+		options = append(options, item)
+	}
+
+	f.btnOK = widget.NewButton("Start Mirroring", f.onButtonClick)
+
+	f.selScreen = widget.NewSelect(options, func(s string) {
+	})
+	f.selScreen.SetSelectedIndex(0) // default selected first
+
+	f.labChoose = widget.NewLabel("Choose the screen to mirror")
+
+	f.window.SetContent(container.NewVBox(
+		f.labChoose,
+		f.selScreen,
+		layout.NewSpacer(),
+		container.NewCenter(
+			f.btnOK,
+		),
+		layout.NewSpacer(),
+	))
 
 	f.discovery = airplay.NewDiscovery()
 	go f.searchAppleTV()
@@ -104,14 +89,17 @@ func (f *MainForm) OnFormCreate(sender vcl.IObject) {
 	c := airplay.NewAppleTVClient(f.appleTV)
 	f.client = c
 
+	f.window.ShowAndRun()
 }
 
-func (f *MainForm) OnButtonClick(sender vcl.IObject) {
+func (f *MainForm) onButtonClick() {
+	log.Println("Click Button")
 	if f.startMirroring {
 		f.startMirroring = false
-		f.BtnOK.SetCaption("Start Mirroring")
+		f.btnOK.SetText("Start Mirroring")
 		f.videoProvider.Stop()
 		f.client.Stop()
+		f.selScreen.Enable()
 	} else {
 		if f.appleTV == nil {
 			go f.searchAppleTV()
@@ -119,7 +107,7 @@ func (f *MainForm) OnButtonClick(sender vcl.IObject) {
 		}
 
 		f.startMirroring = true
-		index := f.CombList.ItemIndex()
+		index := f.selScreen.SelectedIndex()
 		sc := f.screens[index]
 		f.videoProvider.ChooseScreen(sc, FPS)
 		f.videoProvider.Start()
@@ -143,25 +131,25 @@ func (f *MainForm) OnButtonClick(sender vcl.IObject) {
 			}
 		}()
 
-		f.BtnOK.SetCaption("Stop Mirroring")
+		f.btnOK.SetText("Stop Mirroring")
+		f.selScreen.Disable()
 	}
-	f.CombList.SetEnabled(!f.startMirroring)
+
 }
 
 func (f *MainForm) searchAppleTV() {
-	defer vcl.ThreadSync(func() {
-		f.LabChoose.SetCaption("Start Mirroring")
-		f.BtnOK.SetEnabled(true)
-	})
+	defer func() {
+		f.labChoose.SetText("Start Mirroring")
+		f.btnOK.Enable()
+	}()
 	go func() {
 		info := ""
 		for f.appleTV == nil {
 			info += "."
-			vcl.ThreadSync(func() {
-				f.BtnOK.SetEnabled(false)
-				f.LabChoose.SetCaption("Searching Apple TV" + info)
 
-			})
+			f.btnOK.Disable()
+			f.labChoose.SetText("Searching Apple TV" + info)
+
 			if info == "........" {
 				info = ""
 			}
@@ -170,9 +158,7 @@ func (f *MainForm) searchAppleTV() {
 	}()
 	f.appleTV = f.discovery.GetAirPlayService().AddrIPv4
 	if f.appleTV == nil {
-		vcl.ThreadSync(func() {
-			vcl.ShowMessage("Cannot find AppleTV, try again please!")
-		})
+		dialog.ShowInformation("Error", "Cannot find AppleTV, try again please!", f.window)
 		f.appleTV = f.discovery.GetAirPlayService().AddrIPv4
 		return
 	}
