@@ -4,7 +4,7 @@ A cross platform airplay screen mirroring client by golang
 
 ## How to use
 Step 1: get the application, there are two options.
-   * Option 1: Download **[bin file](https://github.com/openairplay/AirplayMirroringGo/blob/main/cmd/airplay)** for Linux amd64
+   * Option 1: Download **[bin file](https://raw.githubusercontent.com/openairplay/AirplayMirroringGo/main/cmd/airplay)** for Linux amd64
    * Option 2: Download source code and build using this commands  
      ```shell
      git clone git@github.com:openairplay/AirplayMirroringGo.git
