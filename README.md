@@ -12,11 +12,12 @@ Step 1: get the application, there are two options.
      make build
      ```
 Step 2: run airplay in your CLI.
-   ![Run airplay](snapshot.png "Snapshot")
+   ![Run airplay](snapshot_start.png "Snapshot Start")
 
 Step 3: waiting for searching Apple TV ip, the "Start Mirroring" button will be enabled after it found Apple TV
 
 Step 4: click "Start Mirroring" to start mirroring and the button label will be change to "Start Mirroring", click "Start Mirroring" button will stop it.
+   ![Run airplay](snapshot_stop.png "Snapshot Stop")
 
 
 ### Welcome to pull request for this project !

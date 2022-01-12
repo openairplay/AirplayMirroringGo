@@ -104,6 +104,8 @@ func (f *MainForm) onButtonClick() {
 		if f.appleTV == nil {
 			go f.searchAppleTV()
 			return
+		} else {
+			f.client.SetAppleTVIP(f.appleTV)
 		}
 
 		f.startMirroring = true
