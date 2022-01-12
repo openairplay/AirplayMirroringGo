@@ -59,6 +59,9 @@ func (c *AppleTVClient) serve() {
 	}
 }
 
+func (c *AppleTVClient) SetAppleTVIP(ip net.IP) {
+	c.url = fmt.Sprintf("http://%s:7000/photo", ip)
+}
 func (c *AppleTVClient) sendPhoto(buf []byte) {
 	var (
 		req *http.Request
